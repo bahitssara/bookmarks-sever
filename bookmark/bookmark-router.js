@@ -7,7 +7,7 @@ const bookmarkRouter = express.Router()
 const bodyParser = express.json()
 
 bookmarkRouter
-    .route('/bookmark')
+    .route('/bookmarks')
     .get((req,res) => {
         res.json(bookmarks)
     })
@@ -69,7 +69,7 @@ bookmarkRouter
     })
 
     bookmarkRouter
-        .route('/bookmark/:id')
+        .route('/bookmarks/:id')
         .get((req, res) => {
             const { id } = req.params;
             const bookmark = bookmarks.find(b => b.id == id);
