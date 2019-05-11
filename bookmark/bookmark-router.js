@@ -92,7 +92,7 @@ bookmarkRouter
                     logger.error(`Bookmark with id:${id} not found.`);
                     return res 
                     .status(404)
-                    .send('Bookmark not found')
+                    .send({ error: { message: `Bookmark doesn't exist` } })
             }
             res.json(serializedBookmark(bookmark))
         })
