@@ -48,10 +48,10 @@ describe('Bookmarks Endpoints', function() {
               })
         }) 
         
-        context(`Given an XSS attack article`, () => {
+        context(`Given an XSS attack bookmarks`, () => {
             const { maliciousBookmark, expectedBookmark } = fixtures.makeMaliciousBookmark()
       
-            beforeEach('insert malicious article', () => {
+            beforeEach('insert malicious bookmarks', () => {
               return db
                 .into('bookmarks')
                 .insert([ maliciousBookmark ])
@@ -229,4 +229,39 @@ describe('Bookmarks Endpoints', function() {
           })
       
       })
+
+      describe(`DELETE /bookmarks/:id`, () => {
+        context(`Given no bookmarks`, () => {
+            it(`responds with 404`, () => {
+                return supertest(app)
+                     .delete(`/bookmarks/1234`)
+                     .set('Authorization', `Bearer ${process.env.API_KEY}`)
+                     .expect(404, { error: {message: `Bookmark doesn't exist` } })
+            })
+        })
+        context('Given there are bookmarks in the database', () => {
+          const testBookmarks = fixtures.makeBookmarksArray()
+     
+          beforeEach('insert bookmarks', () => {
+            return db
+              .into('bookmarks')
+              .insert(testBookmarks)
+          })
+     
+          it('responds with 204 and removes the bookmarks', () => {
+            const idToRemove = 2
+            const expectedBookmarks = testBookmarks.filter(bookmark => bookmark.id !== idToRemove)
+            return supertest(app)
+              .delete(`/bookmarks/${idToRemove}`)
+              .set('Authorization', `Bearer ${process.env.API_KEY}`)
+              .expect(204)
+              .then(() =>
+                supertest(app)
+                  .get(`/bookmarks`)
+                  .set('Authorization', `Bearer ${process.env.API_KEY}`)
+                  .expect(expectedBookmarks)
+              )
+          })
+        })
+     })
 })
