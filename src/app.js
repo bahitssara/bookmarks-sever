@@ -31,6 +31,7 @@ app.use(function validateBearerToken(req, res, next) {
 app.use(bookmarkRouter)
 
 
+
 app.use(function errorHandler(error, req, res, next) {
     let response
     if(NODE_ENV === 'production') {

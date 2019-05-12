@@ -3,14 +3,15 @@ const uuid = require('uuid/v4')
 const logger = require('../src/logger')
 const { bookmarks } = require('../src/store')
 const { isWebUri } = require('valid-url')
+const xss = require('xss')
 const BookmarksService = require('../src/bookmarks-service')
 const bookmarkRouter = express.Router()
 const bodyParser = express.json()
 
 const serializedBookmark = bookmark => ({
     id: bookmark.id,
-    title: bookmark.title,
-    body: bookmark.body,
+    title: xss(bookmark.title),
+    body: xss(bookmark.body),
     weburl: bookmark.weburl,
     rating: Number(bookmark.rating)
 })
@@ -24,62 +25,73 @@ bookmarkRouter
             })
             .catch(next)
     })
-    .post(bodyParser, (req, res) => {
-        const { title, url, description, rating } = req.body;
+    .post(bodyParser, (req, res, next) => {
+        const { title, body, weburl, rating } = req.body;
 
     if(!title) {
         logger.error(`Title is required`);
         return res 
             .status(400)
-            .send('Invalid data')
+            .send({
+                error: { message: `Missing 'title' in request` }
+            })
     }
 
-    if(!url) {
-        logger.error(`Url is required`);
-        return res 
-            .status(400)
-            .send('Invalid data')
-    }
-
-    if(!description) {
+    if(!body) {
         logger.error(`Description is required`);
         return res 
             .status(400)
-            .send('Invalid data')
+            .send({
+                error: { message: `Missing 'body' in request` }
+            })
+    }
+
+    if(!weburl) {
+        logger.error(`Url is required`);
+        return res 
+            .status(400)
+            .send({
+                error: { message: `Missing 'weburl' in request` }
+            })
     }
 
     if (!Number.isInteger(rating) || rating < 0 || rating > 5 ){
         logger.error(`Invalid rating of ${rating} given`)
         return res
             .status(400)
-            .send(`Rating must be a number between 0-5`)
+            .send({
+                error: { message: `'rating', rating must be between 0-5`}
+            })
     }
 
-    if (!isWebUri(url)) {
-        logger.error(`Invalid url of ${url} given`)
+    if (!isWebUri(weburl)) {
+        logger.error(`Invalid url of ${weburl} given`)
         return res
             .status(400)
-            .send( `url nmust be a valid URL`)
+            .send( `url must be a valid URL`)
     }
 
-    const id = uuid();
-
     const bookmark = {
-        id,
         title,
-        url,
-        description
+        body,
+        weburl,
+        rating
     };
-    
-    bookmarks.push(bookmark)
 
-    logger.info(`Bookmark with id:${id} created`)
-
-    res 
-        .status(201)
-        .location(`http://localhost:8000/bookmark/${id}`)
-        .json(bookmark)
+    BookmarksService.insertBookmark(
+        req.app.get('db'),
+        bookmark
+      )
+        .then(bookmark => {
+          logger.info(`Bookmark with id ${bookmark.id} created.`)
+          res
+            .status(201)
+            .location(`/bookmarks/${bookmark.id}`)
+            .json(serializedBookmark(bookmark))
+        })
+        .catch(next)
     })
+
 
     bookmarkRouter
         .route('/bookmarks/:id')
